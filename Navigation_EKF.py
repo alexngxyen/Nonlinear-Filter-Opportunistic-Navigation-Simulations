@@ -10,7 +10,8 @@ import scipy.linalg
 
 # Initialize Simulation Parameters
 def kalman_filter(x, P, n, npts, y, F, Q, H, R):
-    """ Script for Kalman Filter for Linear State Space Model
+    """ Script for Kalman Filter for Linear State Space Model 
+
     Inputs:
         x: initial state estimate
         P: initial state covariance matrix
