@@ -9,7 +9,7 @@ import scipy.linalg
 ## DO THIS IN ANOTHER SCRIPT??
 
 # Initialize Simulation Parameters
-def kalman_filter(x, P, npts, F, Q, H, R):
+def kalman_filter(x, P, n, npts, y, F, Q, H, R):
     """ Script for Kalman Filter for Linear State Space Model
     Inputs:
         x: initial state estimate
@@ -31,7 +31,7 @@ def kalman_filter(x, P, npts, F, Q, H, R):
         # Update
         K = P_hat_pred @ H.T @ np.linalg.inv(H @ P_hat_pred @ H.T + R)
         x_hat = x_hat_pred + K @ (y[:,i] - H @ x_hat_pred)
-        P_hat = (np.eye(n_states) - K @ H) @ P_hat_pred
+        P_hat = (np.eye(n) - K @ H) @ P_hat_pred
         # Store
         x_hat_store[:,i] = x_hat
         P_hat_store[:,i] = P_hat
