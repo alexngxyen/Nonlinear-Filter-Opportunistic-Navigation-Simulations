@@ -19,7 +19,7 @@ def get_q_clk(clk_type,T):
     return q_clk
     
 # Initialize   
-npts = 800
+npts = 850
 T = 0.1
 r_sop = np.array([[250,100],[0,-100],[500,0],[300,300],[700,-300],[1200,0]]).transpose()
 N_sop = r_sop.shape[1]
