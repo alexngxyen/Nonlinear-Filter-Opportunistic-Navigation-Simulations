@@ -1,4 +1,5 @@
 # Import Packages
+from socket import TIPC_CONN_TIMEOUT
 import numpy as np
 import matplotlib.pyplot as plt
 import math
@@ -58,20 +59,77 @@ def matrixInitialization(dynamics_state_transition, soop_state_transition, clock
     This function will construct the matrices needed to implement the nonlinear filter.
     """
     
+    # Initialize Parameters
+    speed_of_light         = 299792458
+    number_of_measurements = unknown_soops + partially_known_soops
+    number_of_states       = 4 + 2*partially_known_soops + 4*unknown_soops
+
     # Linear Transformation Matrix (i.e., Similarity Transformation)
+    linear_transformation_matrix = np.zeros((number_of_states, number_of_states + 2))
+
+    Tr = np.hstack((np.eye(4), np.zeros((4, 2)) ))                                     # Transformation Matrix for Receiver's Position/Velocity States
+    Trn = np.tile(np.zeros((4, 2)), (1, partially_known_soops))
+    Trm = np.tile(np.zeros((4, 4)), (1, unknown_soops))
+    linear_transformation_matrix[0:4, :] = np.hstack((Tr, Trn, Trm))
+
+    for i_nz in range(number_of_measurements):                                         # Transformation Matrix for SoOP's Position/Clock Error States
+        if i_nz <= partially_known_soops:
+            Tsi = -np.eye(2)
+            Tni = np.hstack((np.tile(np.zeros((2, 2))), (1, i_nz - 1), Tsi, np.tile(np.zeros((2, 2)), (1, partially_known_soops - i_nz))), 
+                             np.tile(np.zeros((2, 4)), (1, unknown_soops)))
+            Trclk = np.hstack((np.zeros(2, 4), np.eye(2))) 
+
+            # Trii[] = ...
+            # Tnii[] = ...
+            
+
+        elif i_nz > partially_known_soops & i_nz <= number_of_measurements:
+            Tsi = linalg.block_diag(np.eye(2), -np.eye(2)) 
+            Tmi = np.hstack((np.tile(np.zeros((4, 2))), (1, partially_known_soops), 
+                             np.tile(np.zeros((4, 4)), (1, i_nz - (partially_known_soops + 1)))), Tsi, np.tile(np.zeros((4, 4)), (1, number_of_measurements - i_nz)))
+            Trclk = linalg.block_diag(np.zeros(2, 4), np.eye(2))
+
+            # Trii[] = ...
+            # Tmii[] = ...
+
+        else:
+            print('error')
 
 
     # Initialize Matrices
+
+    for i_nz in range(number_of_measurements):                                         
+        if i_nz <= partially_known_soops:
+            # State Transition 
+
+
+            # Process Covariance 
+
+
+            # Estimation Error Covariance
+
+
+        elif i_nz > partially_known_soops & i_nz <= number_of_measurements:
+            # State Transition 
+
+
+            # Process Covariance 
+
+
+            # Estimation Error Covariance
 
 
     # State Transition Matrix
 
 
-    # Process Noise Matrix
-
-
     # Estimation Error Covariance Matrix
 
+
+    # Process Covariance Matrix
+    
+    
+    # Measurement Covariance Matrix
+    measurement_covariance_matrix = measurement_noise*np.eye(number_of_measurements)
 
     return linear_transformation_matrix, state_transition_matrix, input_matrix, estimation_error_covariance_matrix, process_covariance_matrix, measurement_covariance_matrix
 
@@ -97,15 +155,15 @@ x_s0 = initializeSoopVector(nz)                          # State Vector
 h0_s, hneg2_s = clockQuality('Typical OCXO')             # Typical Oven-Controlled Crystal Oscillator (OCXO) 
 
 """ Power Spectral Density """
-# Dynamics Process Noise
+# Dynamics 
 qx = 0.25                                                # East Position Process Noise
 qy = qx                                                  # North Position Process Noise
 
-# Receiver Process Noise
+# Receiver Clock 
 S_wtr    = h0_rx/2
 S_wtrdot = 2*math.pi**2*hneg2_rx
 
-# SoOP Process Noise
+# SoOP Clock
 S_wts    = h0_s/2; 
 S_wtsdot = 2*math.pi**2*hneg2_s
 
@@ -127,8 +185,8 @@ Fpv = np.bmat([[np.eye(2), np.eye(2)*T], [np.zeros((2, 2)), np.eye(2)]])
 Fr = linalg.block_diag(Fpv, Fclk)
 
 # Receiver Process Covariance
-Qpv   = np.array([[qx*T**3/3, 0, qx*T**2/2, 0], [0, qy*T**3/3, 0, qy*T**2/2], [qx*T**2/2, 0, qx*T, 0], [0, qy*T**2/2, 0, qy*T]])
-Qpv_r = np.array([[S_wtr*T + S_wtrdot*T**3/3, S_wtrdot*T**2/2], [S_wtrdot*T**2/2, S_wtrdot*T]])
+Qpv    = np.array([[qx*T**3/3, 0, qx*T**2/2, 0], [0, qy*T**3/3, 0, qy*T**2/2], [qx*T**2/2, 0, qx*T, 0], [0, qy*T**2/2, 0, qy*T]])
+Qclk_r = np.array([[S_wtr*T + S_wtrdot*T**3/3, S_wtrdot*T**2/2], [S_wtrdot*T**2/2, S_wtrdot*T]])
 
 """ Initialize Nonlinear Filter"""
 # Nonlinear Filter Parameters
@@ -138,3 +196,10 @@ P_s0   = linalg.block_diag(1e3*np.eye(2), 30**2, 0.3**2)                        
 P_clk0 = linalg.block_diag(30**2, 0.3**2)                                                # Partially-Known SoOP's Initial Estimation Error Covariance Matrix
 
 # Construct Necessary Matrices (e.g., T, F, G, P, Q, R)
+T, F, G, P, Q, R = matrixInitialization(Fpv, Fs, Fclk, Qpv, Qclk_r, Qclk_s, P_rx0, P_s0, P_clk0, measurement_noise, n, m)
+
+# Process and Measurement Noise
+q = linalg.cholesky(Q, lower=True)
+r = linalg.cholesky(R, lower=True) 
+
+# Extended Kalman Filter States
