@@ -1,5 +1,4 @@
 # Import Packages
-from socket import TIPC_CONN_TIMEOUT
 import numpy as np
 import matplotlib.pyplot as plt
 import math
@@ -73,7 +72,6 @@ def matrixInitialization(dynamics_state_transition, soop_state_transition, clock
 
     for i_nz in range(number_of_measurements):                                         # Transformation Matrix for SoOP's Position/Clock Error States
         if i_nz <= partially_known_soops:
-            print(i_nz)
             Tsi = -np.eye(2)
             Tni = np.hstack((np.tile(np.zeros((2, 2)), (1, i_nz)), Tsi, np.tile(np.zeros((2, 2)), (1, partially_known_soops - (i_nz + 1))), 
                             np.tile(np.zeros((2, 4)), (1, unknown_soops))))
@@ -91,11 +89,11 @@ def matrixInitialization(dynamics_state_transition, soop_state_transition, clock
             print('error')
 
     # Initialize Matrices
-    Fi = np.empty(2, 2)
-    Pi = Fi
-    Qi = Fi
+    Fi = clock_state_transition
+    Pi = partially_known_soop_estimation_error_covariance
+    Qi = c**2*soop_clock_process_noise
 
-    for i_nz in range(number_of_measurements):                                         
+    for i_nz in range(number_of_measurements-1):                                         
         if i_nz <= partially_known_soops:
             # State Transition 
             Fi = linalg.block_diag(Fi, clock_state_transition)
@@ -118,7 +116,7 @@ def matrixInitialization(dynamics_state_transition, soop_state_transition, clock
 
     # State Transition Matrix
     state_transition_matrix = linalg.block_diag(dynamics_state_transition, Fi)
-    input_matrix = np.zeros((len(state_transition_matrix)), 2)
+    input_matrix = np.zeros(((len(state_transition_matrix)), 2))
 
     # Estimation Error Covariance Matrix
     estimation_error_covariance_matrix = linear_transformation_matrix @ linalg.block_diag(receiver_estimation_error_covariance, Pi) @ linear_transformation_matrix.transpose()
@@ -195,6 +193,8 @@ P_clk0 = linalg.block_diag(30**2, 0.3**2)                                       
 
 # Construct Necessary Matrices (e.g., T, F, G, P, Q, R)
 T, F, G, P, Q, R = matrixInitialization(Fpv, Fs, Fclk, Qpv, Qclk_r, Qclk_s, P_rx0, P_s0, P_clk0, measurement_noise, n, m)
+
+print(Q)
 
 # Process and Measurement Noise
 q = linalg.cholesky(Q, lower=True)
