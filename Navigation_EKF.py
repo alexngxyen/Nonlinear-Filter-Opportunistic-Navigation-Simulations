@@ -50,7 +50,6 @@ def clockQuality(clock_type):
         print('clock quality type not recognized.')
     return white_frequency_coefficient, frequency_random_walk_coefficient
 
-# define variables nicely
 def matrixInitialization(dynamics_state_transition, soop_state_transition, clock_state_transition,
                          dynamics_process_noise, receiver_clock_process_noise, soop_clock_process_noise, 
                          receiver_estimation_error_covariance, unknown_soop_estimation_error_covariance, partially_known_soop_estimation_error_covariance, 
@@ -74,59 +73,58 @@ def matrixInitialization(dynamics_state_transition, soop_state_transition, clock
 
     for i_nz in range(number_of_measurements):                                         # Transformation Matrix for SoOP's Position/Clock Error States
         if i_nz <= partially_known_soops:
+            print(i_nz)
             Tsi = -np.eye(2)
-            Tni = np.hstack((np.tile(np.zeros((2, 2))), (1, i_nz - 1), Tsi, np.tile(np.zeros((2, 2)), (1, partially_known_soops - i_nz))), 
-                             np.tile(np.zeros((2, 4)), (1, unknown_soops)))
-            Trclk = np.hstack((np.zeros(2, 4), np.eye(2))) 
-
-            # Trii[] = ...
-            # Tnii[] = ...
-            
+            Tni = np.hstack((np.tile(np.zeros((2, 2)), (1, i_nz)), Tsi, np.tile(np.zeros((2, 2)), (1, partially_known_soops - (i_nz + 1))), 
+                            np.tile(np.zeros((2, 4)), (1, unknown_soops))))
+            Trclk = np.hstack((np.zeros((2, 4)), np.eye(2))) 
+            linear_transformation_matrix[4 + 2*i_nz:4 + 2*i_nz + 2, :] = np.hstack((Trclk, Tni))    
 
         elif i_nz > partially_known_soops & i_nz <= number_of_measurements:
             Tsi = linalg.block_diag(np.eye(2), -np.eye(2)) 
-            Tmi = np.hstack((np.tile(np.zeros((4, 2))), (1, partially_known_soops), 
-                             np.tile(np.zeros((4, 4)), (1, i_nz - (partially_known_soops + 1)))), Tsi, np.tile(np.zeros((4, 4)), (1, number_of_measurements - i_nz)))
-            Trclk = linalg.block_diag(np.zeros(2, 4), np.eye(2))
-
-            # Trii[] = ...
-            # Tmii[] = ...
+            Tmi = np.hstack((np.tile(np.zeros((4, 2)), (1, partially_known_soops)), 
+                            np.tile(np.zeros((4, 4)), (1, (i_nz + 1) - (partially_known_soops + 1))), Tsi, np.tile(np.zeros((4, 4)), (1, number_of_measurements - (i_nz + 1)))))
+            Trclk = linalg.block_diag(np.zeros((2, 4)), np.eye(2))
+            linear_transformation_matrix[4 + 2*partially_known_soops + 4*(i_nz + 1):4 + 2*partially_known_soops + 4*(i_nz + 1) + 4, :] = np.hstack((Trclk, Tmi))
 
         else:
             print('error')
 
-
     # Initialize Matrices
+    Fi = np.empty(2, 2)
+    Pi = Fi
+    Qi = Fi
 
     for i_nz in range(number_of_measurements):                                         
         if i_nz <= partially_known_soops:
             # State Transition 
-
+            Fi = linalg.block_diag(Fi, clock_state_transition)
 
             # Process Covariance 
-
+            Qi = linalg.block_diag(Qi, c**2*soop_clock_process_noise)
 
             # Estimation Error Covariance
-
+            Pi = linalg.block_diag(Pi, partially_known_soop_estimation_error_covariance)
 
         elif i_nz > partially_known_soops & i_nz <= number_of_measurements:
             # State Transition 
-
+            Fi = linalg.block_diag(Fi, soop_state_transition)
 
             # Process Covariance 
-
+            Qi = linalg.block_diag(Qi, linalg.block_diag(np.finfo(float).eps*np.eye(2), c**2*soop_clock_process_noise))
 
             # Estimation Error Covariance
-
+            Pi = linalg.block_diag(Pi,unknown_soop_estimation_error_covariance)
 
     # State Transition Matrix
-
+    state_transition_matrix = linalg.block_diag(dynamics_state_transition, Fi)
+    input_matrix = np.zeros((len(state_transition_matrix)), 2)
 
     # Estimation Error Covariance Matrix
-
+    estimation_error_covariance_matrix = linear_transformation_matrix @ linalg.block_diag(receiver_estimation_error_covariance, Pi) @ linear_transformation_matrix.transpose()
 
     # Process Covariance Matrix
-    
+    process_covariance_matrix = linear_transformation_matrix @ linalg.block_diag(dynamics_process_noise, c**2*receiver_clock_process_noise, Qi) @ linear_transformation_matrix.transpose()
     
     # Measurement Covariance Matrix
     measurement_covariance_matrix = measurement_noise*np.eye(number_of_measurements)
