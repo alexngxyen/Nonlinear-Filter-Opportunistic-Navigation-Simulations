@@ -1,10 +1,14 @@
 # Import Packages
+import timeit
 import numpy as np
 import matplotlib.pyplot as plt
 import math
 from scipy import linalg
 
 """ Functions """
+# Once the code is complete, create two different .py scripts. One for the common functions between the scripts 
+# and one for the extended kalman filter functions (e.g., time update and measurement update).
+
 def initializeSoopVector(n_soops, east_soop_seed=1, north_soop_seed=2):
     """
     This function initializes the SoOP's state vector which is composed of the position and clock error states.
@@ -78,7 +82,7 @@ def matrixInitialization(dynamics_state_transition, soop_state_transition, clock
             Trclk = np.hstack((np.zeros((2, 4)), np.eye(2))) 
             linear_transformation_matrix[4 + 2*i_nz:4 + 2*i_nz + 2, :] = np.hstack((Trclk, Tni))    
 
-        elif i_nz > partially_known_soops & i_nz <= number_of_measurements:
+        elif i_nz > partially_known_soops and i_nz <= number_of_measurements:
             Tsi = linalg.block_diag(np.eye(2), -np.eye(2)) 
             Tmi = np.hstack((np.tile(np.zeros((4, 2)), (1, partially_known_soops)), 
                             np.tile(np.zeros((4, 4)), (1, (i_nz + 1) - (partially_known_soops + 1))), Tsi, np.tile(np.zeros((4, 4)), (1, number_of_measurements - (i_nz + 1)))))
@@ -104,7 +108,7 @@ def matrixInitialization(dynamics_state_transition, soop_state_transition, clock
             # Estimation Error Covariance
             Pi = linalg.block_diag(Pi, partially_known_soop_estimation_error_covariance)
 
-        elif i_nz > partially_known_soops & i_nz <= number_of_measurements:
+        elif i_nz > partially_known_soops and i_nz <= number_of_measurements:
             # State Transition 
             Fi = linalg.block_diag(Fi, soop_state_transition)
 
@@ -175,7 +179,7 @@ Qclk_s = np.array([[S_wts*T + S_wtsdot*T**3/3, S_wtsdot*T**2/2], [S_wtsdot*T**2/
 
 """ Receiver Dynamics """
 # Velocity Random Walk State Transition Matrix
-Fpv = np.bmat([[np.eye(2), np.eye(2)*T], [np.zeros((2, 2)), np.eye(2)]])
+Fpv = np.block([[np.eye(2), np.eye(2)*T], [np.zeros((2, 2)), np.eye(2)]])
 
 # Receiver State Transition Matrix
 Fr = linalg.block_diag(Fpv, Fclk)
@@ -194,10 +198,19 @@ P_clk0 = linalg.block_diag(30**2, 0.3**2)                                       
 # Construct Necessary Matrices (e.g., T, F, G, P, Q, R)
 T, F, G, P, Q, R = matrixInitialization(Fpv, Fs, Fclk, Qpv, Qclk_r, Qclk_s, P_rx0, P_s0, P_clk0, measurement_noise, n, m)
 
-print(Q)
-
 # Process and Measurement Noise
 q = linalg.cholesky(Q, lower=True)
 r = linalg.cholesky(R, lower=True) 
 
-# Extended Kalman Filter States
+# Construct Extended Kalman Filter State Vector
+
+
+# Extended Kalman Filter
+start = timeit.default_timer()                                                            # Start Timer
+
+
+""" Input Extended Kalman filter code here (e.g., x_hat, P_hat, x_hat_new, P_hat_new) - maybe use functions"""
+
+
+end = timeit.default_timer()                                                              # End Timer
+
