@@ -1,3 +1,16 @@
+#  ============================================================================
+#  Name        : CKF_Simulation.py
+#  Description : Two-dimensional (2-D) cubature Kalman filter (CKF) implemented 
+#                on a vehicle performing opportunistic navigation in a 
+#                global navigation satellite system (GNSS)-denied environment
+#                using terrestrial signals of opportunity (SoOP).   
+#  Author      : Alex Nguyen
+#  Date        : August 2022
+#  ============================================================================
+#  Please email alexaan2@uci.edu if you have any questions or comments 
+#  regarding this code.
+#  ============================================================================
+
 # Import Packages
 from Functions import Initialize_Nonlinear_Filters
 from Functions import Extended_Kalman_Filter
