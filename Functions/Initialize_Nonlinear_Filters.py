@@ -174,8 +174,8 @@ def constructStateVector(partially_known_soops, unknown_soops,
     estimate_state_vector = np.random.multivariate_normal(true_state_vector, estimation_error_covariance_matrix).transpose()
     
     # Reshape Dimensions
-    true_state_vector     = true_state_vector.reshape((len(true_state_vector), 1))
-    estimate_state_vector = estimate_state_vector.reshape((len(estimate_state_vector), 1))
+    true_state_vector     = true_state_vector.reshape(len(true_state_vector), 1)
+    estimate_state_vector = estimate_state_vector.reshape(len(estimate_state_vector), 1)
 
     # Input State Vector
     input_state_vector = np.zeros((2, 1))
