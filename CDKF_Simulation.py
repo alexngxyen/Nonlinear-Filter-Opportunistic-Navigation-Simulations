@@ -7,14 +7,10 @@
 #  Author      : Alex Nguyen
 #  Date        : August 2022
 #  ============================================================================
-#  Notes       : - Tunable Parameters
-#                    (i) Simulation Setup - 'n', 'm', 'T', 't_end', 'x_rx0', 
-#                        'h0_rx', 'hneg2_rx', 'h0_s', 'hneg2_s','qx', 'qy', 
-#                        'measurement_noise', 'P_rx0', 'P_s0', 'P_clk0',  
-#                         'sigma_bound', and set random seeds.
-#                    (ii) Nonlinear Filter - ...
-#                - If you have any questions or comments about this code, please 
-#                  message the following email address "alexaan2@uci.edu".
+#
+#  If you have any questions or comments about this code, please do not hesitate
+#  to message the following email address "alexaan2@uci.edu".
+#
 #  ============================================================================
 
 # Import Packages
@@ -26,33 +22,52 @@ import matplotlib.pyplot as plt
 import math
 from scipy import linalg
 
+# ======================================================================== TUNABLE PARAMETERS ============================================================================= #
+''' Please tune the parameters below such that the desired environment settings are obtained. '''
+
+# Number of SoOPs
+m  = 0                                                                                        # Unknown SoOPs
+n  = 10                                                                                       # Partially-Known (Position States) SoOPs 
+
+# Simulation Time
+T     = 0.1                                                                                   # Sampling Period [s]
+t_end = 100                                                                                   # End Time [s]
+
+# State Vector 
+x_rx0 = np.array([0, 50, 15, -5, 10, 1]).reshape(6, 1)                                        # Receiver State Vector    
+
+# Clock Quality [e.g., 'CSAC', 'Best OCXO', 'Typical OCXO', 'Typical TCXO', 'Worst TCXO']
+h0_rx, hneg2_rx = Initialize_Nonlinear_Filters.clockQuality('Typical OCXO')                   # Receiver's Crystal Oscillator Quality
+h0_s, hneg2_s   = Initialize_Nonlinear_Filters.clockQuality('Typical OCXO')                   # SoOPs' Crystal Oscillator Quality 
+
+# Reciever Dynamics Power Spectral Density (PSD)
+qx = 0.25                                                                                     # East Position Process Noise
+qy = qx                                                                                       # North Position Process Noise
+
+# Measurement Noise
+measurement_noise = 25                                                                        
+
+# Initial Estimation Error Covariance Matrices
+P_rx0  = linalg.block_diag(10**2*np.eye(2), 5**2*np.eye(2), 300**2, 3**2)                     # Receiver States
+P_s0   = linalg.block_diag(1e3*np.eye(2), 300**2, 3**2)                                       # Unknown SoOP States (IF ANY)
+P_clk0 = linalg.block_diag(300**2, 3**2)                                                      # Partially-Known SoOP States
+
+# ========================================================================================================================================================================== #
+
 """ Simulation Parameters """
-# SoOPs
-m  = 0                                                                                # Unknown SoOPs
-n  = 9                                                                                # Partially-Known (Position States) SoOPs 
-nz = n + m                                                                            # Total Number of SoOP Measurements
-nx = 4 + 2*n + 4*m                                                                    # Total Number of States
+# Number of Measurements and States
+nz = n + m                                                                                    # Total Number of SoOP Measurements
+nx = 4 + 2*n + 4*m                                                                            # Total Number of States
  
 # Time
-c     = 299792458                                                                     # Speed of Light [m/s]
-T     = 0.1                                                                           # Sampling Period [s]
-t_end = 100                                                                           # Simulation End Time [s]
-t     = np.arange(0, t_end + T, T)                                                    # Experiment Time Duration [s]
-simulation_length = np.size(t)                                                        # Simulation Time Length [samples]
-
-# Initialize Receiver Parameters
-x_rx0 = np.array([0, 50, 15, -5, 10, 1]).reshape(6, 1)                                # State Vector      
-h0_rx, hneg2_rx = Initialize_Nonlinear_Filters.clockQuality('Typical OCXO')           # Typical Oven-Controlled Crystal Oscillator (OCXO)
+c     = 299792458                                                                             # Speed of Light [m/s]
+t     = np.arange(0, t_end + T, T)                                                            # Experiment Time Duration [s]
+simulation_length = np.size(t)                                                                # Simulation Time Length [samples]
 
 # Initialize SoOP Parameters
-x_s0 = Initialize_Nonlinear_Filters.initializeSoopVector(nz)                          # State Vector             
-h0_s, hneg2_s = Initialize_Nonlinear_Filters.clockQuality('Typical OCXO')             # Typical Oven-Controlled Crystal Oscillator (OCXO) 
+x_s0 = Initialize_Nonlinear_Filters.initializeSoopVector(nz)                                  # State Vector             
 
 """ Power Spectral Density """
-# Dynamics 
-qx = 0.25                                                                             # East Position Process Noise
-qy = qx                                                                               # North Position Process Noise
-
 # Receiver Clock 
 S_wtr    = h0_rx/2
 S_wtrdot = 2*math.pi**2*hneg2_rx
@@ -87,12 +102,6 @@ Qclk_r = np.array([[S_wtr*T + S_wtrdot*T**3/3, S_wtrdot*T**2/2],
                    [S_wtrdot*T**2/2, S_wtrdot*T]])
 
 """ Initialize Nonlinear Filter"""
-# Nonlinear Filter Parameters
-measurement_noise = 25                            
-P_rx0  = linalg.block_diag(10**2*np.eye(2), 5**2*np.eye(2), 300**2, 3**2)                # Receiver's Initial Estimation Error Covariance Matrix
-P_s0   = linalg.block_diag(1e3*np.eye(2), 300**2, 3**2)                                  # Unknown SoOP's Initial Estimation Error Covariance Matrix
-P_clk0 = linalg.block_diag(300**2, 3**2)                                                 # Partially-Known SoOP's Initial Estimation Error Covariance Matrix
-
 # Construct Necessary Matrices (e.g., T, F, G, P, Q, R)
 LT, F, G, P, Q, R = Initialize_Nonlinear_Filters.matrixInitialization(Fpv, Fs, Fclk, Qpv, Qclk_r, Qclk_s, P_rx0, P_s0, P_clk0, measurement_noise, n, m)
 
@@ -122,7 +131,11 @@ for k in range(simulation_length):
     np.random.seed(k)                                            
     vk = r @ np.random.randn(nz, 1)
     
-    """INCLUDE NEW CODE""" 
+    # True Pseudorange Measurements 
+    h_zk = Initialize_Nonlinear_Filters.truePseudorangeMeasurements(x_true, x_s0, n, m)
+    zk   = h_zk + vk
+    
+    # ADD NEW CODE HERE   
 
     # Save Values
     x_true_hist[:, k:k+1] = x_true
@@ -190,11 +203,11 @@ for i_fig in range(2):                                                          
     # Add Labels
     if i_fig == 0:
         plt.title('Position States')
-        plt.legend([r'$\tilde{x}_{\mathrm{east}}$', r'$\pm 3 \sigma$'], loc='best')     
+        plt.legend([r'$\tilde{x}_{\mathrm{east}}$', r'$\pm {} \sigma$'.format(sigma_bound)], loc='best')     
     
     elif i_fig == 1:
         plt.xlabel('Time (s)')
-        plt.legend([r'$\tilde{x}_{\mathrm{north}}$', r'$\pm 3 \sigma$'], loc='best')  
+        plt.legend([r'$\tilde{x}_{\mathrm{north}}$', r'$\pm {} \sigma$'.format(sigma_bound)], loc='best')  
 
 plt.figure()
 ylabel_two = ['East Error (m/s)', 'North Error (m/s)']
@@ -213,11 +226,11 @@ for i_fig in range(2, 4):                                                       
     # Add labels
     if i_fig == 2:
         plt.title('Velocity States')
-        plt.legend([r'$\dot{\tilde{x}}_{\mathrm{east}}$', r'$\pm 3\sigma$'], loc='best')  
+        plt.legend([r'$\tilde{\dot{x}}_{\mathrm{east}}$', r'$\pm {} \sigma$'.format(sigma_bound)], loc='best')  
     
     elif i_fig == 3:
         plt.xlabel('Time (s)')
-        plt.legend([r'$\dot{\tilde{x}}_{\mathrm{north}}$', r'$\pm 3 \sigma$'], loc='best')  
+        plt.legend([r'$\tilde{\dot{x}}_{\mathrm{north}}$', r'$\pm {} \sigma$'.format(sigma_bound)], loc='best')  
 
 """ Navigation Solution Performance Metrics"""    
 # Root Mean Square Error (RMSE)
@@ -242,15 +255,15 @@ if m > 0:
     
     for i_m in range(m):
         # Compute Initial and Final Errors 
-        initial_error = np.append(initial_error, linalg.norm(x_tilde_hist[unknown_index:unknown_index+2, 0]))
-        final_error   = np.append(final_error, linalg.norm(x_tilde_hist[unknown_index:unknown_index+2, -1]))
+        initial_error = np.append(initial_error, round(linalg.norm(x_tilde_hist[unknown_index:unknown_index+2, 0]), 4))
+        final_error   = np.append(final_error, round(linalg.norm(x_tilde_hist[unknown_index:unknown_index+2, -1]), 4))
     
         # Update Index
         unknown_index += 4
         
-    print("Unknown SoOP Towers", *range(1, m + 1), ":")
-    print("\tInitial Error =", '%.4f' % initial_error)
-    print("\t  Final Error =", '%.4f' % final_error)
+    print("Unknown SoOP Towers:\t", *range(1, m + 1))
+    print("\tInitial Error =", initial_error)
+    print("\t  Final Error =", final_error)
 
 # Show Plots
 plt.show()
