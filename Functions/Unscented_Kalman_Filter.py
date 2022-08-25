@@ -1,6 +1,6 @@
 #  ============================================================================
-#  Name        : Extended_Kalman_Filter.py
-#  Description : Helper functions needed to run the 'EKF_Simulation.py' code  
+#  Name        : Unscented_Kalman_Filter.py
+#  Description : Helper functions needed to run the 'UKF_Simulation.py' code  
 #  Author      : Alex Nguyen
 #  Date        : August 2022
 #  ============================================================================
@@ -11,6 +11,8 @@
 # Import Packages
 import numpy as np
 from scipy import linalg
+
+""" EDIT THE FUNCTIONS BELOW HERE!!"""
 
 # Functions
 def predictionStep(corrected_state_vector, input_vector, state_transition_matrix, input_matrix, process_covariance_matrix, estimation_error_covariance_matrix):

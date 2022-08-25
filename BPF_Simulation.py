@@ -7,8 +7,14 @@
 #  Author      : Alex Nguyen
 #  Date        : August 2022
 #  ============================================================================
-#  Please email alexaan2@uci.edu if you have any questions or comments 
-#  regarding this code.
+#  Notes       : - Tunable Parameters
+#                    (i) Simulation Setup - 'n', 'm', 'T', 't_end', 'x_rx0', 
+#                        'h0_rx', 'hneg2_rx', 'h0_s', 'hneg2_s','qx', 'qy', 
+#                        'measurement_noise', 'P_rx0', 'P_s0', 'P_clk0',  
+#                         'sigma_bound', and set random seeds.
+#                    (ii) Nonlinear Filter - ...
+#                - If you have any questions or comments about this code, please 
+#                  message the following email address "alexaan2@uci.edu".
 #  ============================================================================
 
 # Import Packages
@@ -28,9 +34,10 @@ nz = n + m                                                                      
 nx = 4 + 2*n + 4*m                                                                    # Total Number of States
  
 # Time
-c = 299792458                                                                         # Speed of Light [m/s]
-T = 0.1                                                                               # Sampling Period [s]
-t = np.arange(0, 100 + T, T)                                                          # Experiment Time Duration [s]
+c     = 299792458                                                                     # Speed of Light [m/s]
+T     = 0.1                                                                           # Sampling Period [s]
+t_end = 100                                                                           # Simulation End Time [s]
+t     = np.arange(0, t_end + T, T)                                                    # Experiment Time Duration [s]
 simulation_length = np.size(t)                                                        # Simulation Time Length [samples]
 
 # Initialize Receiver Parameters
@@ -115,11 +122,7 @@ for k in range(simulation_length):
     np.random.seed(k)                                            
     vk = r @ np.random.randn(nz, 1)
     
-    # True Pseudorange Measurements 
-    h_zk = Initialize_Nonlinear_Filters.truePseudorangeMeasurements(x_true, x_s0, n, m)
-    zk   = h_zk + vk
-    
-    """ Include Particle Filter code """
+    """INCLUDE NEW CODE""" 
 
     # Save Values
     x_true_hist[:, k:k+1] = x_true
@@ -139,8 +142,8 @@ total_distance = np.sum(np.sqrt((np.diff(x_true_hist[0, :])**2 + np.diff(x_true_
 # End Timer
 end = timeit.default_timer()                   
 print("\nEnvironment:", n, "partially-known SoOPs and", m, "unknown SoOPs")   
-print("Total Distance Traveled =", total_distance, "m over", t[-1], "secs\n")                                        
-print("EKF elapsed time =", end - start, "seconds")
+print("Total Distance Traveled =", '%.2f' % total_distance, "m over", t[-1], "secs\n")                                        
+print("EKF elapsed time =", '%.4f' % (end - start), "seconds")
 
 # Estimation Error Trajectories
 x_tilde_hist = x_true_hist - x_est_hist
@@ -168,9 +171,10 @@ plt.title('Simulation Layout')
 
 # Estimated Error Trajectories Plots    
 sigma_bound = 3                                                                                      # 1, 2, or 3-sigma (68, 95, or 99.7) confidence interval    
+sigma_bound_text = str(sigma_bound)
 
 plt.figure()
-ylabel_one = ['East Position (m)', 'North Position (m)']
+ylabel_one = ['East Error (m)', 'North Error (m)']
 
 for i_fig in range(2):                                                                               # Position States
     # Plot
@@ -181,17 +185,19 @@ for i_fig in range(2):                                                          
     plt.ylabel(ylabel_one[i_fig])
     plt.xlim([t[0], t[-1]])       
     plt.minorticks_on()
-    plt.grid(True, which='both')   
+    plt.grid(True, which='both')     
     
     # Add Labels
     if i_fig == 0:
-        plt.title('Estimation Error Trajectories')
+        plt.title('Position States')
+        plt.legend([r'$\tilde{x}_{\mathrm{east}}$', r'$\pm 3 \sigma$'], loc='best')     
     
     elif i_fig == 1:
         plt.xlabel('Time (s)')
+        plt.legend([r'$\tilde{x}_{\mathrm{north}}$', r'$\pm 3 \sigma$'], loc='best')  
 
 plt.figure()
-ylabel_two = ['East Velocity (m/s)', 'North Velocity (m/s)']
+ylabel_two = ['East Error (m/s)', 'North Error (m/s)']
 
 for i_fig in range(2, 4):                                                                            # Velocity States
     # Plot
@@ -206,10 +212,12 @@ for i_fig in range(2, 4):                                                       
     
     # Add labels
     if i_fig == 2:
-        plt.title('Estimation Error Trajectories')
+        plt.title('Velocity States')
+        plt.legend([r'$\dot{\tilde{x}}_{\mathrm{east}}$', r'$\pm 3\sigma$'], loc='best')  
     
     elif i_fig == 3:
         plt.xlabel('Time (s)')
+        plt.legend([r'$\dot{\tilde{x}}_{\mathrm{north}}$', r'$\pm 3 \sigma$'], loc='best')  
 
 """ Navigation Solution Performance Metrics"""    
 # Root Mean Square Error (RMSE)
@@ -220,8 +228,8 @@ velocity_rmse = np.sqrt(np.mean(np.sum(x_tilde_hist[2:4,:]**2, axis=0)))
 max_position_error = max(np.sqrt(np.sum(x_tilde_hist[0:2,:]**2, axis=0)))
 max_velocity_error = max(np.sqrt(np.sum(x_tilde_hist[2:4,:]**2, axis=0)))
 
-print("\t     RMSE: Position =", position_rmse, "m, Velocity =", velocity_rmse, "m/s")
-print("\tMax error: Position =", max_position_error, "m, Velocity =", max_velocity_error, "m/s")
+print("\t     RMSE: Position =", '%.4f' % position_rmse, "m & Velocity =", '%.4f' % velocity_rmse, "m/s")
+print("\tMax error: Position =", '%.4f' % max_position_error, "m & Velocity =", '%.4f' % max_velocity_error, "m/s")
 
 # Unknown SoOP (IF ANY)
 if m > 0:
@@ -241,8 +249,8 @@ if m > 0:
         unknown_index += 4
         
     print("Unknown SoOP Towers", *range(1, m + 1), ":")
-    print("\tInitial Error =", initial_error)
-    print("\t  Final Error =", final_error)
+    print("\tInitial Error =", '%.4f' % initial_error)
+    print("\t  Final Error =", '%.4f' % final_error)
 
 # Show Plots
 plt.show()
