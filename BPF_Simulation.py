@@ -9,7 +9,7 @@
 #  ============================================================================
 #
 #  If you have any questions or comments about this code, please do not hesitate
-#  to message the following email address "alexaan2@uci.edu".
+#  to send me an email at "alexaan2@uci.edu".
 #
 #  ============================================================================
 
@@ -23,7 +23,7 @@ import math
 from scipy import linalg
 
 # ======================================================================== TUNABLE PARAMETERS ============================================================================= #
-''' Please tune the parameters below such that the desired environment settings are obtained. '''
+''' FYI, you may tune the parameters below such that the desired environment settings are obtained. '''
 
 # Number of SoOPs
 m  = 0                                                                                        # Unknown SoOPs
@@ -51,6 +51,9 @@ measurement_noise = 25
 P_rx0  = linalg.block_diag(10**2*np.eye(2), 5**2*np.eye(2), 300**2, 3**2)                     # Receiver States
 P_s0   = linalg.block_diag(1e3*np.eye(2), 300**2, 3**2)                                       # Unknown SoOP States (IF ANY)
 P_clk0 = linalg.block_diag(300**2, 3**2)                                                      # Partially-Known SoOP States
+
+# 1, 2, or 3-Sigma (68%, 95%, or 99.7%) Confidence Intervals 
+sigma_bound = 3         
 
 # ========================================================================================================================================================================== #
 
@@ -182,8 +185,7 @@ plt.ylabel('North (m)')
 plt.legend(['Ground-Truth', 'Estimated', 'SoOP Locations', 'Estimated SoOP Locations'], loc='best')     
 plt.title('Simulation Layout') 
 
-# Estimated Error Trajectories Plots    
-sigma_bound = 3                                                                                      # 1, 2, or 3-sigma (68, 95, or 99.7) confidence interval    
+# Estimated Error Trajectories Plots     
 sigma_bound_text = str(sigma_bound)
 
 plt.figure()
