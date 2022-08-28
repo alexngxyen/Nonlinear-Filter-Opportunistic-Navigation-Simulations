@@ -13,23 +13,25 @@ import numpy as np
 from scipy import linalg
 
 # Functions
-def predictionStep(corrected_state_vector, input_vector, state_transition_matrix, input_matrix, process_covariance_matrix, estimation_error_covariance_matrix):
+def predictionStep(corrected_state_vector, input_vector, state_transition_matrix, input_matrix, process_covariance_matrix, corrected_estimation_error_covariance_matrix):
     """
-    This function will perform the time-update (prediction step) of the extended Kalman filter.
+    This function will perform the time-update (prediction step) for the extended Kalman filter.
     """
     
     # State Vector Prediction
     predicted_state_vector = state_transition_matrix @ corrected_state_vector + input_matrix @ input_vector 
     
     # Estimation Error Covariance Prediction
-    predicted_estimation_error_covariance = state_transition_matrix @ estimation_error_covariance_matrix @ state_transition_matrix.transpose() + process_covariance_matrix
-    predicted_estimation_error_covariance = 0.5 * (predicted_estimation_error_covariance + predicted_estimation_error_covariance.transpose())                                  # Ensure symmetry
+    predicted_estimation_error_covariance = state_transition_matrix @ corrected_estimation_error_covariance_matrix @ state_transition_matrix.transpose() + process_covariance_matrix
+    
+     # Enforce Covariance Symmetry
+    predicted_estimation_error_covariance = 0.5 * (predicted_estimation_error_covariance + predicted_estimation_error_covariance.transpose())                                 
 
     return predicted_state_vector, predicted_estimation_error_covariance
     
 def estimatedPseudorangeMeasurements(estimate_state_vector, soop_state_vector, partially_known_soops, unknown_soops):
     """
-    This function will compute the pseudorange measurements at a specific time instance for the nonlinear filter.
+    This function will compute the pseudorange measurements at a specific time instance for the extended Kalman filter.
     """
     
     # Initialize
@@ -77,10 +79,10 @@ def estimatedPseudorangeMeasurements(estimate_state_vector, soop_state_vector, p
     
     return estimate_pseudorange_measurement, jacobian_matrix        
 
-def correctionStep(predicted_state_vector, predicted_estimation_error_covariance_matrix, 
-                   true_pseudorange_measurement, estimate_pseudorange_measurement, jacobian_matrix, measurement_covariance_matrix):
+def correctionStep(predicted_state_vector, predicted_estimation_error_covariance_matrix, true_pseudorange_measurement, estimate_pseudorange_measurement, jacobian_matrix, 
+                   measurement_covariance_matrix):
     """
-    This function will perform the measurement-update (correction step) of the extended Kalman filter.
+    This function will perform the measurement-update (correction step) for the extended Kalman filter.
     """
     
     # Measurement Residual
@@ -98,6 +100,8 @@ def correctionStep(predicted_state_vector, predicted_estimation_error_covariance
     # Estimation Error Covariance Correction
     jordan_form_matrix                    = np.eye(len(corrected_state_vector)) - kalman_gain_matrix @ jacobian_matrix
     corrected_estimation_error_covariance = jordan_form_matrix @ predicted_estimation_error_covariance_matrix @ jordan_form_matrix.transpose() + kalman_gain_matrix @ measurement_covariance_matrix @ kalman_gain_matrix.transpose()
-    corrected_estimation_error_covariance = 0.5 * (corrected_estimation_error_covariance + corrected_estimation_error_covariance.transpose())                # Ensure symmetry
+    
+    # Enforce Covariance Symmetry
+    corrected_estimation_error_covariance = 0.5 * (corrected_estimation_error_covariance + corrected_estimation_error_covariance.transpose())           
 
     return corrected_state_vector, corrected_estimation_error_covariance

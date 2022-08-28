@@ -26,7 +26,7 @@ from scipy import linalg
 ''' FYI, you may tune the parameters below such that the desired environment settings are obtained. '''
 
 # Number of SoOPs
-m  = 0                                                                                        # Unknown SoOPs
+m  = 5                                                                                        # Unknown SoOPs
 n  = 10                                                                                       # Partially-Known (Position States) SoOPs 
 
 # Simulation Time
@@ -55,7 +55,10 @@ P_clk0 = linalg.block_diag(300**2, 3**2)                                        
 # 1, 2, or 3-Sigma (68%, 95%, or 99.7%) Confidence Intervals 
 sigma_bound = 3     
 
-# ...    
+# Scaling Parameters
+alpha  = 1e-3                                                                                 # Spread of Sigma Points Around Mean [alpha \in [1e-3, 1]]
+kappa  = 0                                                                                    # Secondary Scaling Parameter [kappa = 0 (typically)]
+beta   = 2                                                                                    # Knowledge of Prior Distribution [beta = 2 is optimal for Gaussian Distributions]                                       
 
 # ========================================================================================================================================================================== #
 
@@ -63,7 +66,15 @@ sigma_bound = 3
 # Number of Measurements and States
 nz = n + m                                                                                    # Total Number of SoOP Measurements
 nx = 4 + 2*n + 4*m                                                                            # Total Number of States
- 
+
+# Sigma Point Parameters
+N    = 2*nx + 1                                                                               # Number of Sigma Points
+lam  = alpha**2*(nx + kappa) - nx                                                             # Scaling Parameter
+wm_0 = lam / (nx + lam)         
+wm   = np.hstack((np.array([[wm_0]]), np.tile((1/2) / (nx + lam), (1, 2*nx)))).reshape(1, N)  # Constant Weights for Mean of Sigma Points   
+wc_0 = wm_0 + (1 - alpha**2 + beta)                       
+wc   = wm                                                                                     # Constant Weights for Covariance of Sigma Points
+
 # Time
 c     = 299792458                                                                             # Speed of Light [m/s]
 t     = np.arange(0, t_end + T, T)                                                            # Experiment Time Duration [s]
@@ -114,11 +125,11 @@ LT, F, G, P, Q, R = Initialize_Nonlinear_Filters.matrixInitialization(Fpv, Fs, F
 q = linalg.cholesky(Q, lower=True)
 r = linalg.cholesky(R, lower=True) 
 
-# Construct Extended Kalman Filter State Vector
+# Construct Unscented Kalman Filter State Vector
 P_est = P
 x_true, x_est, u = Initialize_Nonlinear_Filters.constructStateVector(n, m, x_rx0, x_s0, P_est, LT)
 
-""" Extended Kalman Filter """
+""" Unscented Kalman Filter """
 # Preallocation
 x_true_hist = np.zeros((nx, simulation_length))
 x_est_hist  = np.zeros((nx, simulation_length))
@@ -140,14 +151,19 @@ for k in range(simulation_length):
     h_zk = Initialize_Nonlinear_Filters.truePseudorangeMeasurements(x_true, x_s0, n, m)
     zk   = h_zk + vk
     
+    # Time-Update (Prediction Step)
+    x_predict, P_predict = Unscented_Kalman_Filter.predictionStep(N, nx, lam, wm, wc, x_est, P_est, F, Q)
     
-    # ADD NEW CODE HERE 
+    # Estimate Pseudorange Measurements
+    Z_sp, zk_hat, sigma_points_new = Unscented_Kalman_Filter.estimatedPseudorangeMeasurements(N, nx, m, n, lam, wm, x_predict, P_predict, x_s0)
     
+    # Measurement-Update (Correction Step)
+    x_correct, P_correct = Unscented_Kalman_Filter.correctionStep(N, sigma_points_new, wc, zk_hat, zk, Z_sp, x_predict, P_predict, R)
 
     # Save Values
     x_true_hist[:, k:k+1] = x_true
     x_est_hist[:, k:k+1]  = x_correct
-    P_std_hist[:, k:k+1]  = np.sqrt(P_correct.diagonal()).reshape(nx, 1)
+    P_std_hist[:, k:k+1]  = np.sqrt(np.diag(P_correct)).reshape(nx, 1)
     zk_hist[:, k:k+1]     = zk
     zk_hat_hist[:, k:k+1] = zk_hat
     
@@ -163,7 +179,7 @@ total_distance = np.sum(np.sqrt((np.diff(x_true_hist[0, :])**2 + np.diff(x_true_
 end = timeit.default_timer()                   
 print("\nEnvironment:", n, "partially-known SoOPs and", m, "unknown SoOPs")   
 print("Total Distance Traveled =", '%.2f' % total_distance, "m over", t[-1], "secs\n")                                        
-print("EKF elapsed time =", '%.4f' % (end - start), "seconds")
+print("UKF elapsed time =", '%.4f' % (end - start), "seconds")
 
 # Estimation Error Trajectories
 x_tilde_hist = x_true_hist - x_est_hist

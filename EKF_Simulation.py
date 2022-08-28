@@ -26,7 +26,7 @@ from scipy import linalg
 ''' FYI, you may tune the parameters below such that the desired environment settings are obtained. '''
 
 # Number of SoOPs
-m  = 0                                                                                        # Unknown SoOPs
+m  = 5                                                                                        # Unknown SoOPs
 n  = 10                                                                                       # Partially-Known (Position States) SoOPs 
 
 # Simulation Time
@@ -138,19 +138,19 @@ for k in range(simulation_length):
     h_zk = Initialize_Nonlinear_Filters.truePseudorangeMeasurements(x_true, x_s0, n, m)
     zk   = h_zk + vk
     
-    # Prediction Step
+    # Time-Update (Prediction Step)
     x_predict, P_predict = Extended_Kalman_Filter.predictionStep(x_est, u, F, G, Q, P_est)
 
     # Estimate Pseudorange Measurements
     zk_hat, H = Extended_Kalman_Filter.estimatedPseudorangeMeasurements(x_predict, x_s0, n, m)
 
-    # Correction Step
+    # Measurement-Update (Correction Step)
     x_correct, P_correct = Extended_Kalman_Filter.correctionStep(x_predict, P_predict, zk, zk_hat, H, R)    
 
     # Save Values
     x_true_hist[:, k:k+1] = x_true
     x_est_hist[:, k:k+1]  = x_correct
-    P_std_hist[:, k:k+1]  = np.sqrt(P_correct.diagonal()).reshape(nx, 1)
+    P_std_hist[:, k:k+1]  = np.sqrt(np.diag(P_correct)).reshape(nx, 1)
     zk_hist[:, k:k+1]     = zk
     zk_hat_hist[:, k:k+1] = zk_hat
     

@@ -143,7 +143,7 @@ for k in range(simulation_length):
     # Save Values
     x_true_hist[:, k:k+1] = x_true
     x_est_hist[:, k:k+1]  = x_correct
-    P_std_hist[:, k:k+1]  = np.sqrt(P_correct.diagonal()).reshape(nx, 1)
+    P_std_hist[:, k:k+1]  = np.sqrt(np.diag(P_correct)).reshape(nx, 1)
     zk_hist[:, k:k+1]     = zk
     zk_hat_hist[:, k:k+1] = zk_hat
     
