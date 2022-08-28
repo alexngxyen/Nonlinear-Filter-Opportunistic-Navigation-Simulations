@@ -15,7 +15,7 @@
 
 # Import Packages
 from Functions import Initialize_Nonlinear_Filters
-from Functions import Extended_Kalman_Filter
+from Functions import Central_Difference_Kalman_Filter
 import timeit
 import numpy as np
 import matplotlib.pyplot as plt
@@ -30,7 +30,7 @@ m  = 0                                                                          
 n  = 10                                                                                       # Partially-Known (Position States) SoOPs 
 
 # Simulation Time
-T     = 0.1                                                                                   # Sampling Period [s]
+T     = 0.01                                                                                  # Sampling Period [s]
 t_end = 100                                                                                   # End Time [s]
 
 # State Vector 
@@ -112,11 +112,11 @@ LT, F, G, P, Q, R = Initialize_Nonlinear_Filters.matrixInitialization(Fpv, Fs, F
 q = linalg.cholesky(Q, lower=True)
 r = linalg.cholesky(R, lower=True) 
 
-# Construct Extended Kalman Filter State Vector
+# Construct Central Difference Kalman Filter State Vector
 P_est = P
 x_true, x_est, u = Initialize_Nonlinear_Filters.constructStateVector(n, m, x_rx0, x_s0, P_est, LT)
 
-""" Extended Kalman Filter """
+""" Central Difference Kalman Filter """
 # Preallocation
 x_true_hist = np.zeros((nx, simulation_length))
 x_est_hist  = np.zeros((nx, simulation_length))
@@ -138,7 +138,14 @@ for k in range(simulation_length):
     h_zk = Initialize_Nonlinear_Filters.truePseudorangeMeasurements(x_true, x_s0, n, m)
     zk   = h_zk + vk
     
-    # ADD NEW CODE HERE   
+    # # Time-Update (Prediction Step)
+    # x_predict, P_predict = Cubature_Kalman_Filter.predictionStep(N, nx, x_est, P_est, F, Q)
+       
+    # # Estimate Pseudorange Measurements
+    # Z_sp, zk_hat, sigma_points_new = Cubature_Kalman_Filter.estimatedPseudorangeMeasurements(N, nx, m, n, x_predict, P_predict, x_s0)
+    
+    # # Measurement-Update (Correction Step)
+    # x_correct, P_correct = Cubature_Kalman_Filter.correctionStep(N, sigma_points_new, zk_hat, zk, Z_sp, R, x_predict, P_predict) 
 
     # Save Values
     x_true_hist[:, k:k+1] = x_true
@@ -159,7 +166,7 @@ total_distance = np.sum(np.sqrt((np.diff(x_true_hist[0, :])**2 + np.diff(x_true_
 end = timeit.default_timer()                   
 print("\nEnvironment:", n, "partially-known SoOPs and", m, "unknown SoOPs")   
 print("Total Distance Traveled =", '%.2f' % total_distance, "m over", t[-1], "secs\n")                                        
-print("EKF elapsed time =", '%.4f' % (end - start), "seconds")
+print("CDKF elapsed time =", '%.4f' % (end - start), "seconds")
 
 # Estimation Error Trajectories
 x_tilde_hist = x_true_hist - x_est_hist

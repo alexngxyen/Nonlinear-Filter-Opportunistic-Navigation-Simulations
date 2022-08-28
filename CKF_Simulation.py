@@ -15,7 +15,7 @@
 
 # Import Packages
 from Functions import Initialize_Nonlinear_Filters
-from Functions import Extended_Kalman_Filter
+from Functions import Cubature_Kalman_Filter
 import timeit
 import numpy as np
 import matplotlib.pyplot as plt
@@ -30,7 +30,7 @@ m  = 0                                                                          
 n  = 10                                                                                       # Partially-Known (Position States) SoOPs 
 
 # Simulation Time
-T     = 0.1                                                                                   # Sampling Period [s]
+T     = 0.01                                                                                  # Sampling Period [s]
 t_end = 100                                                                                   # End Time [s]
 
 # State Vector 
@@ -53,7 +53,7 @@ P_s0   = linalg.block_diag(1e3*np.eye(2), 300**2, 3**2)                         
 P_clk0 = linalg.block_diag(300**2, 3**2)                                                      # Partially-Known SoOP States
 
 # 1, 2, or 3-Sigma (68%, 95%, or 99.7%) Confidence Intervals 
-sigma_bound = 3         
+sigma_bound = 3                                        
 
 # ========================================================================================================================================================================== #
 
@@ -61,14 +61,17 @@ sigma_bound = 3
 # Number of Measurements and States
 nz = n + m                                                                                    # Total Number of SoOP Measurements
 nx = 4 + 2*n + 4*m                                                                            # Total Number of States
- 
+
+# Sigma Point Parameters
+N = 2*nx                                                                                      # Number of Sigma Points
+
 # Time
 c     = 299792458                                                                             # Speed of Light [m/s]
 t     = np.arange(0, t_end + T, T)                                                            # Experiment Time Duration [s]
 simulation_length = np.size(t)                                                                # Simulation Time Length [samples]
 
 # Initialize SoOP Parameters
-x_s0 = Initialize_Nonlinear_Filters.initializeSoopVector(nz)                                  # State Vector             
+x_s0 = Initialize_Nonlinear_Filters.initializeSoopVector(nz)                                  # State Vector       
 
 """ Power Spectral Density """
 # Receiver Clock 
@@ -112,11 +115,11 @@ LT, F, G, P, Q, R = Initialize_Nonlinear_Filters.matrixInitialization(Fpv, Fs, F
 q = linalg.cholesky(Q, lower=True)
 r = linalg.cholesky(R, lower=True) 
 
-# Construct Extended Kalman Filter State Vector
+# Construct Cubature Kalman Filter State Vector
 P_est = P
 x_true, x_est, u = Initialize_Nonlinear_Filters.constructStateVector(n, m, x_rx0, x_s0, P_est, LT)
 
-""" Extended Kalman Filter """
+""" Cubature Kalman Filter """
 # Preallocation
 x_true_hist = np.zeros((nx, simulation_length))
 x_est_hist  = np.zeros((nx, simulation_length))
@@ -138,7 +141,14 @@ for k in range(simulation_length):
     h_zk = Initialize_Nonlinear_Filters.truePseudorangeMeasurements(x_true, x_s0, n, m)
     zk   = h_zk + vk
     
-    # ADD NEW CODE HERE
+    # Time-Update (Prediction Step)
+    x_predict, P_predict = Cubature_Kalman_Filter.predictionStep(N, nx, x_est, P_est, F, Q)
+       
+    # Estimate Pseudorange Measurements
+    Z_sp, zk_hat, sigma_points_new = Cubature_Kalman_Filter.estimatedPseudorangeMeasurements(N, nx, m, n, x_predict, P_predict, x_s0)
+    
+    # Measurement-Update (Correction Step)
+    x_correct, P_correct = Cubature_Kalman_Filter.correctionStep(N, sigma_points_new, zk_hat, zk, Z_sp, R, x_predict, P_predict)
 
     # Save Values
     x_true_hist[:, k:k+1] = x_true
@@ -159,7 +169,7 @@ total_distance = np.sum(np.sqrt((np.diff(x_true_hist[0, :])**2 + np.diff(x_true_
 end = timeit.default_timer()                   
 print("\nEnvironment:", n, "partially-known SoOPs and", m, "unknown SoOPs")   
 print("Total Distance Traveled =", '%.2f' % total_distance, "m over", t[-1], "secs\n")                                        
-print("EKF elapsed time =", '%.4f' % (end - start), "seconds")
+print("CKF elapsed time =", '%.4f' % (end - start), "seconds")
 
 # Estimation Error Trajectories
 x_tilde_hist = x_true_hist - x_est_hist

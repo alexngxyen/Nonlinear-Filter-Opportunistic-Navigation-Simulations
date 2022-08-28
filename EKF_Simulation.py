@@ -26,11 +26,11 @@ from scipy import linalg
 ''' FYI, you may tune the parameters below such that the desired environment settings are obtained. '''
 
 # Number of SoOPs
-m  = 5                                                                                        # Unknown SoOPs
+m  = 0                                                                                        # Unknown SoOPs
 n  = 10                                                                                       # Partially-Known (Position States) SoOPs 
 
 # Simulation Time
-T     = 0.1                                                                                   # Sampling Period [s]
+T     = 0.01                                                                                  # Sampling Period [s]
 t_end = 100                                                                                   # End Time [s]
 
 # State Vector 

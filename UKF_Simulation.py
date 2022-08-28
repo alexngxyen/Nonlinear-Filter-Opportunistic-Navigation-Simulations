@@ -26,11 +26,11 @@ from scipy import linalg
 ''' FYI, you may tune the parameters below such that the desired environment settings are obtained. '''
 
 # Number of SoOPs
-m  = 5                                                                                        # Unknown SoOPs
+m  = 0                                                                                        # Unknown SoOPs
 n  = 10                                                                                       # Partially-Known (Position States) SoOPs 
 
 # Simulation Time
-T     = 0.1                                                                                   # Sampling Period [s]
+T     = 0.01                                                                                  # Sampling Period [s]
 t_end = 100                                                                                   # End Time [s]
 
 # State Vector 
@@ -50,15 +50,15 @@ measurement_noise = 25
 # Initial Estimation Error Covariance Matrices
 P_rx0  = linalg.block_diag(10**2*np.eye(2), 5**2*np.eye(2), 300**2, 3**2)                     # Receiver States
 P_s0   = linalg.block_diag(1e3*np.eye(2), 300**2, 3**2)                                       # Unknown SoOP States (IF ANY)
-P_clk0 = linalg.block_diag(300**2, 3**2)                                                      # Partially-Known SoOP States
-
-# 1, 2, or 3-Sigma (68%, 95%, or 99.7%) Confidence Intervals 
-sigma_bound = 3     
+P_clk0 = linalg.block_diag(300**2, 3**2)                                                      # Partially-Known SoOP States   
 
 # Scaling Parameters
 alpha  = 1e-3                                                                                 # Spread of Sigma Points Around Mean [alpha \in [1e-3, 1]]
 kappa  = 0                                                                                    # Secondary Scaling Parameter [kappa = 0 (typically)]
-beta   = 2                                                                                    # Knowledge of Prior Distribution [beta = 2 is optimal for Gaussian Distributions]                                       
+beta   = 2                                                                                    # Knowledge of Prior Distribution [beta = 2 is optimal for Gaussian Distributions]  
+
+# 1, 2, or 3-Sigma (68%, 95%, or 99.7%) Confidence Intervals 
+sigma_bound = 3                                       
 
 # ========================================================================================================================================================================== #
 
