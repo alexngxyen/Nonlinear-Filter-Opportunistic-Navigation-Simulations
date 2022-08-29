@@ -52,6 +52,9 @@ P_rx0  = linalg.block_diag(10**2*np.eye(2), 5**2*np.eye(2), 300**2, 3**2)       
 P_s0   = linalg.block_diag(1e3*np.eye(2), 300**2, 3**2)                                       # Unknown SoOP States (IF ANY)
 P_clk0 = linalg.block_diag(300**2, 3**2)                                                      # Partially-Known SoOP States
 
+# Number of Ensembles Members
+N = 5000
+
 # 1, 2, or 3-Sigma (68%, 95%, or 99.7%) Confidence Intervals 
 sigma_bound = 3         
 
@@ -115,6 +118,12 @@ r = linalg.cholesky(R, lower=True)
 # Construct Ensemble Kalman Filter State Vector
 P_est = P
 x_true, x_est, u = Initialize_Nonlinear_Filters.constructStateVector(n, m, x_rx0, x_s0, P_est, LT)
+np.random.seed(0)
+ensemble_members = np.random.multivariate_normal(x_true.reshape(nx,), P_est, size=N).transpose()
+
+# Update Estimate State Vector and Estimation Error Covariance Matrix from Ensemble Members
+x_est = np.mean(ensemble_members, axis=1).reshape(nx, 1)
+P_est = (ensemble_members - np.tile(x_est, (1, N))) @ (ensemble_members - np.tile(x_est, (1, N))).transpose() / (N - 1)
 
 """ Ensemble Kalman Filter """
 # Preallocation
@@ -138,7 +147,14 @@ for k in range(simulation_length):
     h_zk = Initialize_Nonlinear_Filters.truePseudorangeMeasurements(x_true, x_s0, n, m)
     zk   = h_zk + vk
     
-    # ADD NEW CODE HERE 
+    # Time-Update (Prediction Step)
+    x_predict, P_predict, ensemble_members_predict = Ensemble_Kalman_Filter.predictionStep(k, nx, N, ensemble_members, F, Q)
+       
+    # Estimate Pseudorange Measurements
+    zk_hat, ensemble_members_measurement = Ensemble_Kalman_Filter.estimatedPseudorangeMeasurements(n, m, N, ensemble_members_predict, x_s0)
+    
+    # Measurement-Update (Correction Step)
+    x_correct, P_correct, ensemble_members = Ensemble_Kalman_Filter.correctionStep(k, N, nz, nx, ensemble_members_predict, zk, zk_hat, ensemble_members_measurement, R, x_predict)
 
     # Save Values
     x_true_hist[:, k:k+1] = x_true
