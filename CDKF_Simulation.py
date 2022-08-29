@@ -55,12 +55,22 @@ P_clk0 = linalg.block_diag(300**2, 3**2)                                        
 # 1, 2, or 3-Sigma (68%, 95%, or 99.7%) Confidence Intervals 
 sigma_bound = 3         
 
+# Central Difference Step Size
+h = 0.001*np.sqrt(3)                                                                          # Spread of Sigma Points
+
 # ========================================================================================================================================================================== #
 
 """ Simulation Parameters """
 # Number of Measurements and States
 nz = n + m                                                                                    # Total Number of SoOP Measurements
 nx = 4 + 2*n + 4*m                                                                            # Total Number of States
+
+# Sigma Point Parameters
+N     = 2*nx + 1                                                                              # Number of Sigma Points         
+wm    = np.hstack((np.array([[(h**2 - nx) / h**2]]), 
+                   np.tile(1 / (2*h**2), (1, 2*nx)))).reshape(1, N)                           # Constant Weights for Mean of Sigma Points   
+wc1_i = 1 / (4*h**2)                                                                          # Constant Weights for Covariance of Sigma Points   
+wc2_i = (h**2 - 1) / (4*h**4)         
  
 # Time
 c     = 299792458                                                                             # Speed of Light [m/s]
@@ -68,7 +78,7 @@ t     = np.arange(0, t_end + T, T)                                              
 simulation_length = np.size(t)                                                                # Simulation Time Length [samples]
 
 # Initialize SoOP Parameters
-x_s0 = Initialize_Nonlinear_Filters.initializeSoopVector(nz)                                  # State Vector             
+x_s0 = Initialize_Nonlinear_Filters.initializeSoopVector(nz)                                  # State Vector         
 
 """ Power Spectral Density """
 # Receiver Clock 
@@ -138,14 +148,14 @@ for k in range(simulation_length):
     h_zk = Initialize_Nonlinear_Filters.truePseudorangeMeasurements(x_true, x_s0, n, m)
     zk   = h_zk + vk
     
-    # # Time-Update (Prediction Step)
-    # x_predict, P_predict = Cubature_Kalman_Filter.predictionStep(N, nx, x_est, P_est, F, Q)
+    # Time-Update (Prediction Step)
+    x_predict, P_predict = Central_Difference_Kalman_Filter.predictionStep(N, nx, h, wm, wc1_i, wc2_i, x_est, P_est, F, Q) 
        
-    # # Estimate Pseudorange Measurements
-    # Z_sp, zk_hat, sigma_points_new = Cubature_Kalman_Filter.estimatedPseudorangeMeasurements(N, nx, m, n, x_predict, P_predict, x_s0)
+    # Estimate Pseudorange Measurements
+    Z_sp, zk_hat = Central_Difference_Kalman_Filter.estimatedPseudorangeMeasurements(N, nx, m, n, h, wm, x_predict, P_predict, x_s0) 
     
-    # # Measurement-Update (Correction Step)
-    # x_correct, P_correct = Cubature_Kalman_Filter.correctionStep(N, sigma_points_new, zk_hat, zk, Z_sp, R, x_predict, P_predict) 
+    # Measurement-Update (Correction Step)
+    x_correct, P_correct = Central_Difference_Kalman_Filter.correctionStep(N, nx, wc1_i, wc2_i, zk_hat, zk, Z_sp, x_predict, P_predict, R) 
 
     # Save Values
     x_true_hist[:, k:k+1] = x_true
