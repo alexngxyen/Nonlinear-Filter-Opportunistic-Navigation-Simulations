@@ -10,7 +10,7 @@
 
 # Import Packages 
 from Functions import Initialize_Nonlinear_Filters
-from Functions import Bootstrap_Particle_Filter
+from Functions import Marginalized_Particle_Filter
 import timeit
 import numpy as np
 import matplotlib.pyplot as plt
@@ -47,14 +47,14 @@ P_rx0  = linalg.block_diag(2**2*np.eye(2), 1**2*np.eye(2), 30**2, 0.3**2)       
 P_s0   = linalg.block_diag(1e3*np.eye(2), 30**2, 0.3**2)                                      # Unknown SoOP States (IF ANY)
 P_clk0 = linalg.block_diag(30**2, 0.3**2)                                                     # Partially-Known SoOP States
 
-"""
-Initial estimation error covariance matrices used for the KF variants filters which WILL NOT WORK for the BPF!
-Using these settings will yield a diverging filter.
+# """
+# Initial estimation error covariance matrices used for the KF variants filters which WILL NOT WORK for the BPF!
+# Using these settings will yield a diverging filter.
 
-P_rx0  = linalg.block_diag(10**2*np.eye(2), 5**2*np.eye(2), 300**2, 3**2)                     # Receiver States
-P_s0   = linalg.block_diag(1e3*np.eye(2), 300**2, 3**2)                                       # Unknown SoOP States (IF ANY)
-P_clk0 = linalg.block_diag(300**2, 3**2)                                                      # Partially-Known SoOP States
-"""
+# P_rx0  = linalg.block_diag(10**2*np.eye(2), 5**2*np.eye(2), 300**2, 3**2)                     # Receiver States
+# P_s0   = linalg.block_diag(1e3*np.eye(2), 300**2, 3**2)                                       # Unknown SoOP States (IF ANY)
+# P_clk0 = linalg.block_diag(300**2, 3**2)                                                      # Partially-Known SoOP States
+# """
 
 # Particle Filter Parameters
 N             = 1*10**3                                                                       # Number of Particles
@@ -122,13 +122,13 @@ LT, F, G, P, Q, R = Initialize_Nonlinear_Filters.matrixInitialization(Fpv, Fs, F
 q = linalg.cholesky(Q, lower=True)
 r = linalg.cholesky(R, lower=True) 
 
-# Construct Bootstrap Particle Filter State Vector
+# Construct Marginalized Particle Filter State Vector
 P_est = P
 x_true, x_est, u = Initialize_Nonlinear_Filters.constructStateVector(n, m, x_rx0, x_s0, P_est, LT)
 np.random.seed(1)
 particles = np.random.multivariate_normal(x_true.reshape(nx, ), P_est, size=N).transpose()
 
-""" Bootstrap Particle Filter """
+""" Marginalized Particle Filter """
 # Preallocation
 x_true_hist = np.zeros((nx, simulation_length))
 x_est_hist  = np.zeros((nx, simulation_length))
@@ -150,28 +150,28 @@ for k in range(simulation_length):
     h_zk = Initialize_Nonlinear_Filters.truePseudorangeMeasurements(x_true, x_s0, n, m)
     zk   = h_zk + vk
     
-    # Propogate Particles
-    particles_propogated = Bootstrap_Particle_Filter.propogateParticles(k, particles, N, nx, F, Q)
+    # # Propogate Particles
+    # particles_propogated = Marginalized_Particle_Filter.propogateParticles(k, particles, N, nx, F, Q)
     
-    # Estimate Pseudorange Measurements
-    particle_measurement, zk_hat = Bootstrap_Particle_Filter.estimatedPseudorangeMeasurements(n, m, nx, N, particles_propogated, w, x_s0)
+    # # Estimate Pseudorange Measurements
+    # particle_measurement, zk_hat = Marginalized_Particle_Filter.estimatedPseudorangeMeasurements(n, m, nx, N, particles_propogated, w, x_s0)
     
-    # Compute Likelihood of Particles
-    w = Bootstrap_Particle_Filter.computeLikelihood(nz, N, zk, particle_measurement, w, R)
+    # # Compute Likelihood of Particles
+    # w = Marginalized_Particle_Filter.computeLikelihood(nz, N, zk, particle_measurement, w, R)
     
-    # Resample Particles (If Necessary)
-    Neff = 1/np.sum(w**2)
+    # # Resample Particles (If Necessary)
+    # Neff = 1/np.sum(w**2)
     
-    if Neff < Nthr:
-        # Update Particles
-        particles, w = Bootstrap_Particle_Filter.particleResampling(resample_type, nx, N, particles_propogated, w)
+    # if Neff < Nthr:
+    #     # Update Particles
+    #     particles, w = Marginalized_Particle_Filter.particleResampling(resample_type, nx, N, particles_propogated, w)
         
-    else:
-        # Particles Remain Unchanged
-        particles = particles_propogated
+    # else:
+    #     # Particles Remain Unchanged
+    #     particles = particles_propogated
         
-    # Estimation Statistics
-    x_correct, P_correct = Bootstrap_Particle_Filter.estimationStatistics(N, particles, w)    
+    # # Estimation Statistics
+    # x_correct, P_correct = Marginalized_Particle_Filter.estimationStatistics(N, particles, w)    
         
     # Save Values
     x_true_hist[:, k:k+1] = x_true
@@ -192,7 +192,7 @@ total_distance = np.sum(np.sqrt((np.diff(x_true_hist[0, :])**2 + np.diff(x_true_
 end = timeit.default_timer()                   
 print("\nEnvironment:", n, "partially-known SoOPs and", m, "unknown SoOPs")   
 print("Total Distance Traveled =", '%.2f' % total_distance, "m over", t[-1], "secs\n")                                        
-print("BPF elapsed time =", '%.4f' % (end - start), "seconds")
+print("MPF elapsed time =", '%.4f' % (end - start), "seconds")
 
 # Estimation Error Trajectories
 x_tilde_hist = x_true_hist - x_est_hist
@@ -301,7 +301,7 @@ if m > 0:
     print("\t  Final Error =", final_error)
 
 """ Nonlinear Filter Parameters """
-print("where N = {} (number of particles) and N_threshold = {} (resampling threshold)".format(N, Nthr))
+# print("where N = {} (number of particles) and N_threshold = {} (resampling threshold)".format(N, Nthr))
 print("\n")
 
 # Show Plots
