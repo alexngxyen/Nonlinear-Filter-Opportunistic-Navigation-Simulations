@@ -30,7 +30,7 @@ m  = 0                                                                          
 n  = 10                                                                                       # Partially-Known (Position States) SoOPs 
 
 # Simulation Time
-T     = 0.1                                                                                   # Sampling Period [s]
+T     = 0.01                                                                                  # Sampling Period [s]
 t_end = 100                                                                                   # End Time [s]
 
 # State Vector 
@@ -48,9 +48,24 @@ qy = qx                                                                         
 measurement_noise = 25                                                                        
 
 # Initial Estimation Error Covariance Matrices
+P_rx0  = linalg.block_diag(2**2*np.eye(2), 1**2*np.eye(2), 30**2, 0.3**2)                     # Receiver States
+P_s0   = linalg.block_diag(1e3*np.eye(2), 30**2, 0.3**2)                                      # Unknown SoOP States (IF ANY)
+P_clk0 = linalg.block_diag(30**2, 0.3**2)                                                     # Partially-Known SoOP States
+
+"""
+Initial estimation error covariance matrices used for the KF variants filters which WILL NOT WORK for the BPF!
+Using these settings will yield a diverging filter.
+
 P_rx0  = linalg.block_diag(10**2*np.eye(2), 5**2*np.eye(2), 300**2, 3**2)                     # Receiver States
 P_s0   = linalg.block_diag(1e3*np.eye(2), 300**2, 3**2)                                       # Unknown SoOP States (IF ANY)
 P_clk0 = linalg.block_diag(300**2, 3**2)                                                      # Partially-Known SoOP States
+"""
+
+# Particle Filter Parameters
+N             = 1*10**3                                                                       # Number of Particles
+w             = np.ones((N, 1))/N                                                             # Particle Weights
+Nthr          = 2*N/3                                                                         # Effective Particle Resampling Threshold
+resample_type = 'Systematic Sampling'                                                         # Resampling Type ['Systematic Sampling' or 'Stratified Sampling']
 
 # 1, 2, or 3-Sigma (68%, 95%, or 99.7%) Confidence Intervals 
 sigma_bound = 3         
@@ -115,6 +130,8 @@ r = linalg.cholesky(R, lower=True)
 # Construct Bootstrap Particle Filter State Vector
 P_est = P
 x_true, x_est, u = Initialize_Nonlinear_Filters.constructStateVector(n, m, x_rx0, x_s0, P_est, LT)
+np.random.seed(1)
+particles = np.random.multivariate_normal(x_true.reshape(nx, ), P_est, size=N).transpose()
 
 """ Bootstrap Particle Filter """
 # Preallocation
@@ -138,8 +155,29 @@ for k in range(simulation_length):
     h_zk = Initialize_Nonlinear_Filters.truePseudorangeMeasurements(x_true, x_s0, n, m)
     zk   = h_zk + vk
     
-    # Add new code here.
-
+    # Propogate Particles
+    particles_propogated = Bootstrap_Particle_Filter.propogateParticles(k, particles, N, nx, F, Q)
+    
+    # Estimate Pseudorange Measurements
+    particle_measurement, zk_hat = Bootstrap_Particle_Filter.estimatedPseudorangeMeasurements(n, m, nx, N, particles_propogated, w, x_s0)
+    
+    # Compute Likelihood of Particles
+    w = Bootstrap_Particle_Filter.computeLikelihood(nz, N, zk, particle_measurement, w, R)
+    
+    # Resample Particles (If Necessary)
+    Neff = 1/np.sum(w**2)
+    
+    if Neff < Nthr:
+        # Update Particles
+        particles, w = Bootstrap_Particle_Filter.particleResampling(resample_type, nx, N, particles_propogated, w)
+        
+    else:
+        # Particles Remain Unchanged
+        particles = particles_propogated
+        
+    # Estimation Statistics
+    x_correct, P_correct = Bootstrap_Particle_Filter.estimationStatistics(N, particles, w)    
+        
     # Save Values
     x_true_hist[:, k:k+1] = x_true
     x_est_hist[:, k:k+1]  = x_correct
@@ -232,9 +270,9 @@ for i_fig in range(2, 4):                                                       
     
     elif i_fig == 3:
         plt.xlabel('Time (s)')
-        plt.legend([r'$\tilde{\dot{x}}_{\mathrm{north}}$', r'$\pm {} \sigma$'.format(sigma_bound)], loc='best')  
+        plt.legend([r'$\tilde{\dot{x}}_{\mathrm{north}}$', r'$\pm {} \sigma$'.format(sigma_bound)], loc='best')        
 
-""" Navigation Solution Performance Metrics"""    
+""" Navigation Solution Performance Metrics """    
 # Root Mean Square Error (RMSE)
 position_rmse = np.sqrt(np.mean(np.sum(x_tilde_hist[0:2,:]**2, axis=0)))
 velocity_rmse = np.sqrt(np.mean(np.sum(x_tilde_hist[2:4,:]**2, axis=0)))
@@ -267,6 +305,9 @@ if m > 0:
     print("\tInitial Error =", initial_error)
     print("\t  Final Error =", final_error)
 
-# Show Plots
-plt.show()
+""" Nonlinear Filter Parameters """
+print("where N = {} (number of particles) and N_threshold = {} (resampling threshold)".format(N, Nthr))
 print("\n")
+
+# Show Plots
+plt.show()  

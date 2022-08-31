@@ -26,7 +26,7 @@ from scipy import linalg
 ''' FYI, you may tune the parameters below such that the desired environment settings are obtained. '''
 
 # Number of SoOPs
-m  = 10                                                                                       # Unknown SoOPs
+m  = 0                                                                                        # Unknown SoOPs
 n  = 10                                                                                       # Partially-Known (Position States) SoOPs 
 
 # Simulation Time
@@ -53,7 +53,7 @@ P_s0   = linalg.block_diag(1e3*np.eye(2), 300**2, 3**2)                         
 P_clk0 = linalg.block_diag(300**2, 3**2)                                                      # Partially-Known SoOP States
 
 # Central Difference Step Size
-h = 0.001*np.sqrt(3)                                                                          # Spread of Sigma Points
+h = np.sqrt(3)                                                                                # Spread of Sigma Points
 
 # 1, 2, or 3-Sigma (68%, 95%, or 99.7%) Confidence Intervals 
 sigma_bound = 3         
@@ -251,7 +251,7 @@ for i_fig in range(2, 4):                                                       
         plt.xlabel('Time (s)')
         plt.legend([r'$\tilde{\dot{x}}_{\mathrm{north}}$', r'$\pm {} \sigma$'.format(sigma_bound)], loc='best')  
 
-""" Navigation Solution Performance Metrics"""    
+""" Navigation Solution Performance Metrics """    
 # Root Mean Square Error (RMSE)
 position_rmse = np.sqrt(np.mean(np.sum(x_tilde_hist[0:2,:]**2, axis=0)))
 velocity_rmse = np.sqrt(np.mean(np.sum(x_tilde_hist[2:4,:]**2, axis=0)))
@@ -284,6 +284,9 @@ if m > 0:
     print("\tInitial Error =", initial_error)
     print("\t  Final Error =", final_error)
 
-# Show Plots
-plt.show()
+""" Nonlinear Filter Parameters """
+print("where h = {} (spread of sigma points parameter)".format(h))
 print("\n")
+
+# Show Plots
+plt.show()  

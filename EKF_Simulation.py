@@ -241,7 +241,7 @@ for i_fig in range(2, 4):                                                       
         plt.xlabel('Time (s)')
         plt.legend([r'$\tilde{\dot{x}}_{\mathrm{north}}$', r'$\pm {} \sigma$'.format(sigma_bound)], loc='best')  
 
-""" Navigation Solution Performance Metrics"""    
+""" Navigation Solution Performance Metrics """    
 # Root Mean Square Error (RMSE)
 position_rmse = np.sqrt(np.mean(np.sum(x_tilde_hist[0:2,:]**2, axis=0)))
 velocity_rmse = np.sqrt(np.mean(np.sum(x_tilde_hist[2:4,:]**2, axis=0)))

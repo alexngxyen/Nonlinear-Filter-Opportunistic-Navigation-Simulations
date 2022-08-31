@@ -254,7 +254,7 @@ for i_fig in range(2, 4):                                                       
         plt.xlabel('Time (s)')
         plt.legend([r'$\tilde{\dot{x}}_{\mathrm{north}}$', r'$\pm {} \sigma$'.format(sigma_bound)], loc='best')  
 
-""" Navigation Solution Performance Metrics"""    
+""" Navigation Solution Performance Metrics """    
 # Root Mean Square Error (RMSE)
 position_rmse = np.sqrt(np.mean(np.sum(x_tilde_hist[0:2,:]**2, axis=0)))
 velocity_rmse = np.sqrt(np.mean(np.sum(x_tilde_hist[2:4,:]**2, axis=0)))
@@ -287,6 +287,9 @@ if m > 0:
     print("\tInitial Error =", initial_error)
     print("\t  Final Error =", final_error)
 
-# Show Plots
-plt.show()
+""" Nonlinear Filter Parameters """
+print("where alpha = {} (spread of sigma points parameters), kappa = {} (secondary scaling parameter), and beta = {} (knowledge of prior distribution parameter)".format(alpha, kappa, beta))
 print("\n")
+
+# Show Plots
+plt.show()  
