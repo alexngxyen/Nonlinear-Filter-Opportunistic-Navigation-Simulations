@@ -7,11 +7,6 @@
 #  Author      : Alex Nguyen
 #  Date        : August 2022
 #  ============================================================================
-#
-#  If you have any questions or comments about this code, please do not hesitate
-#  to send me an email at "alexaan2@uci.edu".
-#
-#  ============================================================================
 
 # Import Packages
 from Functions import Initialize_Nonlinear_Filters
